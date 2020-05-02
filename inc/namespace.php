@@ -7,6 +7,7 @@
 
 namespace WP\OAuth2;
 
+use WP\OAuth2\Client as Client;
 use WP\OAuth2\Types\Type;
 use WP_REST_Response;
 
@@ -154,5 +155,62 @@ function get_client( $id ) {
 		return PersonalClient::get_instance();
 	}
 
+	// Simple regex to match JWTs.
+	if ( preg_match( '/^[A-Za-z0-9-_=]+\.[A-Za-z0-9-_=]+\.?[A-Za-z0-9-_.+\/=]*$/', $id ) ) {
+		return DynamicClient::from_jwt( $id );
+	}
+
 	return Client::get_by_id( $id );
+}
+
+/**
+ * Validates the requested redirect uri.
+ *
+ * @param ClientInterface $client
+ * @param string          $uri
+ *
+ * @return bool
+ */
+function validate_redirect_uri( ClientInterface $client, $uri ) {
+	if ( ! Client::validate_callback( $uri ) ) {
+		return false;
+	}
+
+	$supplied       = wp_parse_url( $uri );
+	$all_registered = $client->get_redirect_uris();
+
+	foreach ( $all_registered as $registered_uri ) {
+		$registered = wp_parse_url( $registered_uri );
+
+		// Double-check registered URI is valid.
+		if ( ! $registered ) {
+			continue;
+		}
+
+		// Check all components except query and fragment
+		$parts = [ 'scheme', 'host', 'port', 'user', 'pass', 'path' ];
+		$valid = true;
+		foreach ( $parts as $part ) {
+			if ( isset( $registered[ $part ] ) !== isset( $supplied[ $part ] ) ) {
+				$valid = false;
+				break;
+			}
+
+			if ( ! isset( $registered[ $part ] ) ) {
+				continue;
+			}
+
+			if ( $registered[ $part ] !== $supplied[ $part ] ) {
+				$valid = false;
+				break;
+			}
+		}
+
+		if ( $valid ) {
+			// Stop checking, we have a match.
+			return true;
+		}
+	}
+
+	return false;
 }

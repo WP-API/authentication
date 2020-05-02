@@ -7,6 +7,8 @@
 
 namespace WP\OAuth2\Types;
 
+use WP\OAuth2\ClientInterface;
+use WP\OAuth2\DynamicClient;
 use WP_Error;
 use WP\OAuth2\Client;
 
@@ -26,12 +28,12 @@ class Implicit extends Base {
 	 * Handles the authorization.
 	 *
 	 * @param string $submit
-	 * @param Client $client
+	 * @param ClientInterface $client
 	 * @param array  $data
 	 *
 	 * @return WP_Error
 	 */
-	protected function handle_authorization_submission( $submit, Client $client, $data ) {
+	protected function handle_authorization_submission( $submit, ClientInterface $client, $data ) {
 		$redirect_uri = $data['redirect_uri'];
 
 		switch ( $submit ) {
@@ -47,6 +49,10 @@ class Implicit extends Base {
 					'access_token' => $token->get_key(),
 					'token_type'   => 'bearer',
 				];
+
+				if ( $client instanceof DynamicClient ) {
+					$redirect_args['client_id'] = $client->persist_dynamic_client()->get_id();
+				}
 				break;
 
 			case 'cancel':

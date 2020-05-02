@@ -1,12 +1,14 @@
 <?php
 /**
  *
- * @package WordPress
+ * @package    WordPress
  * @subpackage JSON API
  */
 
 namespace WP\OAuth2\Types;
 
+use WP\OAuth2\ClientInterface;
+use WP\OAuth2\DynamicClient;
 use WP_Error;
 use WP\OAuth2\Client;
 
@@ -25,13 +27,13 @@ class Authorization_Code extends Base {
 	/**
 	 * Handles the authorization.
 	 *
-	 * @param string $submit
-	 * @param Client $client
-	 * @param array  $data
+	 * @param string          $submit
+	 * @param ClientInterface $client
+	 * @param array           $data
 	 *
 	 * @return WP_Error
 	 */
-	protected function handle_authorization_submission( $submit, Client $client, $data ) {
+	protected function handle_authorization_submission( $submit, ClientInterface $client, $data ) {
 		$redirect_uri = $data['redirect_uri'];
 
 		switch ( $submit ) {
@@ -46,6 +48,10 @@ class Authorization_Code extends Base {
 				$redirect_args = [
 					'code' => $code->get_code(),
 				];
+
+				if ( $client instanceof DynamicClient ) {
+					$redirect_args['client_id'] = $client->persist_dynamic_client()->get_id();
+				}
 				break;
 
 			case 'cancel':
@@ -73,7 +79,7 @@ class Authorization_Code extends Base {
 		);
 
 		$generated_redirect = add_query_arg( urlencode_deep( $redirect_args ), $redirect_uri );
-		wp_safe_redirect( $generated_redirect );
+		wp_redirect( $generated_redirect );
 		exit;
 	}
 }

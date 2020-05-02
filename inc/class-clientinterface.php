@@ -7,6 +7,8 @@
 
 namespace WP\OAuth2;
 
+use WP\OAuth2\Tokens\Authorization_Code;
+use WP_Error;
 use WP_User;
 
 interface ClientInterface {

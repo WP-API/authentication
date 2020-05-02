@@ -7,16 +7,18 @@
 
 namespace WP\OAuth2\Types;
 
+use WP\OAuth2\ClientInterface;
 use WP_Error;
 use WP_Http;
 use WP\OAuth2\Client;
+use function WP\OAuth2\get_client;
 
 abstract class Base implements Type {
 	/**
 	 * Handle submission of authorisation page.
 	 *
 	 * @param string $submit Value of the selected button.
-	 * @param Client $client Client being authorised.
+	 * @param ClientInterface $client Client being authorised.
 	 * @param array  $data Data gathered for the request. {
 	 *     @var string $redirect_uri Specified redirection URI.
 	 *     @var string $scope Requested scope.
@@ -24,7 +26,7 @@ abstract class Base implements Type {
 	 * }
 	 * @return WP_Error|void Method should output form and exit, or return encountered error.
 	 */
-	abstract protected function handle_authorization_submission( $submit, Client $client, $data );
+	abstract protected function handle_authorization_submission( $submit, ClientInterface $client, $data );
 
 	/**
 	 * Handle authorisation page.
@@ -46,7 +48,7 @@ abstract class Base implements Type {
 		$scope        = isset( $_GET['scope'] ) ? sanitize_text_field( wp_unslash( $_GET['scope'] ) ) : null;
 		$state        = isset( $_GET['state'] ) ? sanitize_text_field( wp_unslash( $_GET['state'] ) ) : null;
 
-		$client = Client::get_by_id( $client_id );
+		$client = get_client( $client_id );
 		if ( empty( $client ) ) {
 			return new WP_Error(
 				'oauth2.types.authorization_code.handle_authorisation.invalid_client_id',
@@ -112,11 +114,11 @@ abstract class Base implements Type {
 	/**
 	 * Validate the supplied redirect URI.
 	 *
-	 * @param Client      $client Client to validate against.
+	 * @param ClientInterface      $client Client to validate against.
 	 * @param string|null $redirect_uri Redirect URI, if supplied.
 	 * @return string|WP_Error Valid redirect URI on success, error otherwise.
 	 */
-	protected function validate_redirect_uri( Client $client, $redirect_uri = null ) {
+	protected function validate_redirect_uri( ClientInterface $client, $redirect_uri = null ) {
 		if ( empty( $redirect_uri ) ) {
 			$registered = $client->get_redirect_uris();
 			if ( count( $registered ) !== 1 ) {
@@ -143,10 +145,10 @@ abstract class Base implements Type {
 	/**
 	 * Render the authorisation form.
 	 *
-	 * @param Client   $client Client being authorised.
+	 * @param ClientInterface   $client Client being authorised.
 	 * @param WP_Error $errors Errors to display, if any.
 	 */
-	protected function render_form( Client $client, WP_Error $errors = null ) {
+	protected function render_form( ClientInterface $client, WP_Error $errors = null ) {
 		$file = locate_template( 'oauth2-authorize.php' );
 		if ( empty( $file ) ) {
 			$file = dirname( dirname( __DIR__ ) ) . '/theme/oauth2-authorize.php';
@@ -158,10 +160,10 @@ abstract class Base implements Type {
 	/**
 	 * Get the nonce action for a client.
 	 *
-	 * @param Client $client Client to generate nonce for.
+	 * @param ClientInterface $client Client to generate nonce for.
 	 * @return string Nonce action for given client.
 	 */
-	protected function get_nonce_action( Client $client ) {
+	protected function get_nonce_action( ClientInterface $client ) {
 		return sprintf( 'oauth2_authorize:%s', $client->get_id() );
 	}
 
@@ -170,10 +172,10 @@ abstract class Base implements Type {
 	 *
 	 * @param array   $redirect_args Redirect args.
 	 * @param boolean $authorized True if authorized, false otherwise.
-	 * @param Client  $client Client being authorised.
+	 * @param ClientInterface  $client Client being authorised.
 	 * @param array   $data Data for the request.
 	 */
-	protected function filter_redirect_args( $redirect_args, $authorized, Client $client, $data ) {
+	protected function filter_redirect_args( $redirect_args, $authorized, ClientInterface $client, $data ) {
 		if ( ! $authorized ) {
 			/**
 			 * Filter the redirect args when the user has cancelled.
