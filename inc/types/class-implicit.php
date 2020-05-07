@@ -81,7 +81,7 @@ class Implicit extends Base {
 
 		$fragment           = build_query( $redirect_args );
 		$generated_redirect = $redirect_uri . '#' . $fragment;
-		wp_safe_redirect( $generated_redirect );
+		wp_redirect( $generated_redirect );
 		exit;
 	}
 
