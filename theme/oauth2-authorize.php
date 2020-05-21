@@ -67,11 +67,32 @@ $url = $_SERVER['REQUEST_URI']; // phpcs:ignore WordPress.Security.ValidatedSani
 		float: left;
 	}
 
+	.new-client-warning {
+		margin: 5px 0 15px;
+		background-color: #fff8e5;
+		border: 1px solid #ccd0d4;
+		border-left-color: #ffb900;
+		border-left-width: 4px;
+		padding: 1px 12px;
+	}
+
+	#login .new-client-warning p {
+		margin: 0.5em 0;
+		padding: 2px;
+	}
+
 </style>
 
 <form name="oauth2_authorize_form" id="oauth2_authorize_form" action="<?php echo esc_url( $url ); ?>" method="post">
 
 	<?php
+	if ( $client instanceof \WP\OAuth2\DynamicClient && ! $client->is_approved() ) {
+		printf(
+			'<div class="new-client-warning notice notice-warning notice-alt"><p>%s</p></div>',
+			esc_html__( 'Warning: This is an application that you haven\'t connected with before.', 'oauth2' )
+		);
+	}
+
 	printf(
 		'<h2 class="login-title">%s</h2>',
 		esc_html(
