@@ -22,6 +22,7 @@ use WP_User;
 class DynamicClient implements ClientInterface {
 
 	const SOFTWARE_ID_KEY = '_oauth2_software_id_';
+	const SOFTWARE_STATEMENT_KEY = '_oauth2_software_statement';
 	const SCHEMA = array(
 		'type'       => 'object',
 		'properties' => array(
@@ -229,6 +230,7 @@ class DynamicClient implements ClientInterface {
 		}
 
 		update_post_meta( $client->get_post_id(), static::SOFTWARE_ID_KEY . $this->get_id(), 1 );
+		update_post_meta( $client->get_post_id(), static::SOFTWARE_STATEMENT_KEY, $this->statement );
 
 		$approved = $client->approve();
 
