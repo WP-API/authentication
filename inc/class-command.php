@@ -9,6 +9,7 @@
 namespace WP\OAuth2;
 
 use WP\JWT\JWT;
+use function cli\prompt;
 use function WP_CLI\Utils\get_flag_value;
 
 class Command {
@@ -30,6 +31,9 @@ class Command {
 	 * --redirect_uri=<redirect_uri>
 	 * : The URI users will be redirected to after connecting.
 	 *
+	 * [--sign=<sign>]
+	 * : Path to key file to sign the software statement with.
+	 *
 	 * [--<field>=<value>]
 	 * : Additional claims.
 	 *
@@ -47,6 +51,7 @@ class Command {
 
 		$name         = get_flag_value( $assoc_args, 'client_name' );
 		$redirect_uri = get_flag_value( $assoc_args, 'redirect_uri' );
+		$sign         = get_flag_value( $assoc_args, 'sign' );
 
 		$statement = array(
 			'client_uri'    => $client_uri,
@@ -55,7 +60,7 @@ class Command {
 			'client_name'   => $name,
 		);
 
-		unset( $assoc_args['client_name'], $assoc_args['redirect_uri'] );
+		unset( $assoc_args['client_name'], $assoc_args['redirect_uri'], $assoc_args['sign'] );
 		$statement = array_merge( $assoc_args, $statement );
 
 		$valid = DynamicClient::validate_statement( (object) $statement );
@@ -64,7 +69,22 @@ class Command {
 			\WP_CLI::error( $valid );
 		}
 
-		$signed = JWT::encode( $statement, '', 'none' );
+		if ( $sign ) {
+			$passphrase = prompt( 'Passphrase', '', ': ', true );
+			$key        = openssl_pkey_get_private( 'file://' . $sign, $passphrase );
+
+			if ( ! is_resource( $key ) ) {
+				\WP_CLI::error( 'Invalid private key: ' . openssl_error_string() );
+			}
+
+			if ( ! isset( $statement['iss'] ) ) {
+				$statement['iss'] = $client_uri;
+			}
+
+			$signed = JWT::encode( $statement, $key, 'RS256' );
+		} else {
+			$signed = JWT::encode( $statement, '', 'none' );
+		}
 
 		if ( is_wp_error( $signed ) ) {
 			\WP_CLI::error( $signed );
