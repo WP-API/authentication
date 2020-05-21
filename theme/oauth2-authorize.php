@@ -21,7 +21,16 @@ $url = $_SERVER['REQUEST_URI']; // phpcs:ignore WordPress.Security.ValidatedSani
 
 <style>
 
+	#login {
+		width: 60vw;
+		max-width: 650px;
+	}
+
 	.login-title {
+		margin-bottom: 15px;
+	}
+
+	#login form p.client-description {
 		margin-bottom: 15px;
 	}
 
@@ -73,6 +82,18 @@ $url = $_SERVER['REQUEST_URI']; // phpcs:ignore WordPress.Security.ValidatedSani
 			)
 		)
 	);
+
+	if ( $client instanceof \WP\OAuth2\DynamicClient ) {
+		printf(
+			'<p class="client-description">%s</p>',
+			sprintf(
+				/* translators: %1$s: client name. %2$s: the app URI. */
+				__( '%1$s is an application by %2$s.', 'oauth2' ),
+				esc_html( $client->get_name() ),
+				sprintf( '<a href="%1$s" target="_blank" rel="noopener noreferrer"><code>%1$s</code></a>', esc_url( $client->get_software_statement()->client_uri ) )
+			)
+		);
+	}
 	?>
 
 	<div class="login-info">

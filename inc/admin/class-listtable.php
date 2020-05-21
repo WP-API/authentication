@@ -8,6 +8,7 @@
 namespace WP\OAuth2\Admin;
 
 use WP\OAuth2\Client;
+use WP\OAuth2\DynamicClient;
 use WP_List_Table;
 use WP_Query;
 
@@ -141,6 +142,21 @@ class ListTable extends WP_List_Table {
 	 * @return string Content of the column.
 	 */
 	protected function column_description( $item ) {
-		return $item->post_content;
+		$statement   = get_post_meta( $item->ID, DynamicClient::SOFTWARE_STATEMENT_KEY, true );
+		$description = $item->post_content;
+
+		if ( $statement ) {
+			if ( $description ) {
+				$description .= '<br>';
+			}
+
+			$description .= sprintf(
+				/* translators: 1. The client URI. */
+				esc_html__( 'Application by %s.', 'oauth2' ),
+				sprintf( '<a href="%1$s" target="_blank" rel="noopener noreferrer"><code>%1$s</code></a>', esc_url( $statement->client_uri ) )
+			);
+		}
+
+		return $description;
 	}
 }

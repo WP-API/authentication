@@ -49,6 +49,11 @@ abstract class Base implements Type {
 		$state        = isset( $_GET['state'] ) ? sanitize_text_field( wp_unslash( $_GET['state'] ) ) : null;
 
 		$client = get_client( $client_id );
+
+		if ( is_wp_error( $client ) ) {
+			return $client;
+		}
+
 		if ( empty( $client ) ) {
 			return new WP_Error(
 				'oauth2.types.authorization_code.handle_authorisation.invalid_client_id',

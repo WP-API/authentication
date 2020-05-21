@@ -8,6 +8,7 @@
 namespace WP\OAuth2\Admin;
 
 use WP\OAuth2\Client;
+use WP\OAuth2\DynamicClient;
 use WP_Error;
 
 const BASE_SLUG = 'rest-oauth2-apps';
@@ -331,6 +332,8 @@ function render_edit_page() {
 		if ( is_array( $data['callback'] ) ) {
 			$data['callback'] = implode( ',', $data['callback'] );
 		}
+
+		$data['software_statement'] = get_post_meta( $consumer->get_post_id(), DynamicClient::SOFTWARE_STATEMENT_KEY, true );
 	}
 
 	// Header time!
@@ -374,6 +377,20 @@ function render_edit_page() {
 					<textarea class="regular-text" name="description" id="oauth-description" cols="30" rows="5" style="width: 500px"><?php echo esc_textarea( $data['description'] ); ?></textarea>
 					</td>
 				</tr>
+				<?php if ( ! empty( $data['software_statement'] ) ): ?>
+					<tr>
+						<th scope="row">
+							<?php echo esc_html_x( 'Dynamic Client', 'field name', 'oauth2' ); ?>
+						</th>
+						<td>
+							<?php printf(
+								/* translators: 1. The client URI */
+								esc_html__( 'Application by %s.', 'oauth2' ),
+								sprintf( '<a href="%1$s" target="_blank" rel="noopener noreferrer"><code>%1$s</code></a>', esc_url( $data['software_statement']->client_uri ) )
+							); ?>
+						</td>
+					</tr>
+				<?php endif; ?>
 				<tr>
 					<th scope="row">
 						<?php echo esc_html_x( 'Type', 'field name', 'oauth2' ); ?>

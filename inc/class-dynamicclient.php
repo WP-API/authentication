@@ -37,6 +37,11 @@ class DynamicClient implements ClientInterface {
 				'minLength' => 1,
 				'maxLength' => 255,
 			),
+			'client_uri'    => array(
+				'type'     => 'string',
+				'format'   => 'uri',
+				'required' => true,
+			),
 			'redirect_uris' => array(
 				'type'     => 'array',
 				'items'    => array(
@@ -46,7 +51,7 @@ class DynamicClient implements ClientInterface {
 				'required' => true,
 				'maxItems' => 1,
 				'minItems' => 1,
-			)
+			),
 		)
 	);
 
@@ -74,13 +79,40 @@ class DynamicClient implements ClientInterface {
 	 */
 	public static function from_jwt( $jwt ) {
 		$statement = JWT::decode( $jwt, '', array( 'none' ), 'unsecure' );
-		$valid     = rest_validate_value_from_schema( $statement, self::SCHEMA );
+		$valid     = static::validate_statement( $statement );
 
 		if ( is_wp_error( $valid ) ) {
 			return $valid;
 		}
 
 		return new static( $statement );
+	}
+
+	/**
+	 * Validates the software statement.
+	 *
+	 * @param \stdClass $statement
+	 *
+	 * @return WP_Error|true
+	 */
+	public static function validate_statement( $statement ) {
+		$valid = rest_validate_value_from_schema( $statement, self::SCHEMA, 'statement' );
+
+		if ( is_wp_error( $valid ) ) {
+			return $valid;
+		}
+
+		$client_host = parse_url( $statement->client_uri, PHP_URL_HOST );
+
+		foreach ( $statement->redirect_uris as $redirect_uri ) {
+			$redirect_host = parse_url( $redirect_uri, PHP_URL_HOST );
+
+			if ( ! $redirect_host || $redirect_host !== $client_host ) {
+				return new WP_Error( 'client_uri_mismatch', __( 'The redirect URI is not on the same domain as the client URI.', 'oauth2' ) );
+			}
+		}
+
+		return true;
 	}
 
 	public function get_id() {
@@ -190,6 +222,15 @@ class DynamicClient implements ClientInterface {
 		}
 
 		return $persisted->approve();
+	}
+
+	/**
+	 * Get's the software statement.
+	 *
+	 * @return \stdClass
+	 */
+	public function get_software_statement() {
+		return $this->statement;
 	}
 
 	/**
