@@ -67,16 +67,25 @@ $url = $_SERVER['REQUEST_URI']; // phpcs:ignore WordPress.Security.ValidatedSani
 		float: left;
 	}
 
-	.new-client-warning {
+	#login .notice {
 		margin: 5px 0 15px;
-		background-color: #fff8e5;
+		background-color: #fff;
 		border: 1px solid #ccd0d4;
-		border-left-color: #ffb900;
 		border-left-width: 4px;
 		padding: 1px 12px;
 	}
 
-	#login .new-client-warning p {
+	#login .notice-warning {
+		background-color: #fff8e5;
+		border-left-color: #ffb900;
+	}
+
+	#login .notice-success {
+		background-color: #ecf7ed;
+		border-left-color: #46b450;
+	}
+
+	#login .notice p {
 		margin: 0.5em 0;
 		padding: 2px;
 	}
@@ -105,15 +114,27 @@ $url = $_SERVER['REQUEST_URI']; // phpcs:ignore WordPress.Security.ValidatedSani
 	);
 
 	if ( $client instanceof \WP\OAuth2\DynamicClient ) {
-		printf(
-			'<p class="client-description">%s</p>',
-			sprintf(
+		if ( $client->is_verified() ) {
+			printf(
+				'<div class="notice notice-success notice-alt"><p>%s</p></div>',
+				sprintf(
 				/* translators: %1$s: client name. %2$s: the app URI. */
-				__( '%1$s is an application by %2$s.', 'oauth2' ),
-				esc_html( $client->get_name() ),
-				sprintf( '<a href="%1$s" target="_blank" rel="noopener noreferrer"><code>%1$s</code></a>', esc_url( $client->get_software_statement()->client_uri ) )
-			)
-		);
+					__( '%1$s is verified to be an application by %2$s.', 'oauth2' ),
+					esc_html( $client->get_name() ),
+					sprintf( '<a href="%1$s" target="_blank" rel="noopener noreferrer"><code>%1$s</code></a>', esc_url( $client->get_software_statement()->client_uri ) )
+				)
+			);
+		} else {
+			printf(
+				'<p class="client-description">%s</p>',
+				sprintf(
+				/* translators: %1$s: client name. %2$s: the app URI. */
+					__( '%1$s is an application by %2$s.', 'oauth2' ),
+					esc_html( $client->get_name() ),
+					sprintf( '<a href="%1$s" target="_blank" rel="noopener noreferrer"><code>%1$s</code></a>', esc_url( $client->get_software_statement()->client_uri ) )
+				)
+			);
+		}
 	}
 	?>
 

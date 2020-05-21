@@ -23,12 +23,13 @@ class DynamicClient implements ClientInterface {
 
 	const SOFTWARE_ID_KEY = '_oauth2_software_id_';
 	const SOFTWARE_STATEMENT_KEY = '_oauth2_software_statement';
+	const VERIFIED_KEY = '_oauth2_verified_statement';
 	const SCHEMA = array(
 		'type'       => 'object',
 		'properties' => array(
 			'software_id'   => array(
 				'type'     => 'string',
-				'format'   => 'uuid', // Todo support in rest_validate
+				'format'   => 'uuid',
 				'required' => true,
 			),
 			'client_name'   => array(
@@ -58,6 +59,9 @@ class DynamicClient implements ClientInterface {
 	/** @var \stdClass */
 	private $statement;
 
+	/** @var bool */
+	private $verified;
+
 	/** @var Client|WP_Error */
 	private $persisted = false;
 
@@ -65,9 +69,11 @@ class DynamicClient implements ClientInterface {
 	 * DynamicClient constructor.
 	 *
 	 * @param \stdClass $statement Software Statement.
+	 * @param bool      $verified  Whether the statement was verified.
 	 */
-	protected function __construct( $statement ) {
+	protected function __construct( $statement, $verified ) {
 		$this->statement = $statement;
+		$this->verified  = $verified;
 	}
 
 	/**
@@ -78,14 +84,85 @@ class DynamicClient implements ClientInterface {
 	 * @return DynamicClient|WP_Error
 	 */
 	public static function from_jwt( $jwt ) {
-		$statement = JWT::decode( $jwt, '', array( 'none' ), 'unsecure' );
-		$valid     = static::validate_statement( $statement );
+		$iss = JWT::get_claim( $jwt, 'iss' );
+
+		if ( ! is_wp_error( $iss ) ) {
+			$key = self::get_signing_key( $iss );
+
+			if ( is_wp_error( $key ) ) {
+				return $key;
+			}
+
+			$statement = JWT::decode( $jwt, $key, array( 'RS256' ) );
+			$verified  = true;
+		} else {
+			$statement = JWT::decode( $jwt, '', array( 'none' ), 'unsecure' );
+			$verified  = false;
+		}
+
+		$valid = static::validate_statement( $statement );
 
 		if ( is_wp_error( $valid ) ) {
 			return $valid;
 		}
 
-		return new static( $statement );
+		return new static( $statement, $verified );
+	}
+
+	/**
+	 * Gets the signing key for a JWT based on its ISS.
+	 *
+	 * @param string $iss
+	 *
+	 * @return resource|WP_Error
+	 */
+	protected static function get_signing_key( $iss ) {
+		$host = parse_url( $iss, PHP_URL_HOST );
+
+		if ( ! $host ) {
+			return new WP_Error( 'invalid_host', __( 'Could not get a valid host.', 'oauth2' ) );
+		}
+
+		$body = self::fetch_signing_key( $host );
+
+		if ( ! $body ) {
+			return new WP_Error( 'empty_body', __( 'Empty body returned by at the well known URL.', 'oauth2' ) );
+		}
+
+		$key = openssl_pkey_get_public( $body );
+
+		if ( ! is_resource( $key ) ) {
+			return new WP_Error( 'invalid_key', sprintf( __( 'Invalid public key: %s.', 'oauth2' ), openssl_error_string() ?: 'unknown' ) );
+		}
+
+		return $key;
+	}
+
+	/**
+	 * Fetch the signing key from the given hostname.
+	 *
+	 * @param string $host
+	 *
+	 * @return string|WP_Error
+	 */
+	protected static function fetch_signing_key( $host ) {
+		$transient = 'oauth2_key_' . $host;
+
+		if ( false === ( $body = get_site_transient( $transient ) ) || ! is_string( $body ) ) {
+			$url = 'https://' . $host . '/.well-known/wp-api/oauth2.pem';
+
+			$response = wp_safe_remote_get( $url );
+
+			if ( is_wp_error( $response ) ) {
+				$body = '';
+			} else {
+				$body = trim( wp_remote_retrieve_body( $response ) );
+			}
+
+			set_site_transient( $transient, $body, 5 * MINUTE_IN_SECONDS );
+		}
+
+		return $body;
 	}
 
 	/**
@@ -109,6 +186,14 @@ class DynamicClient implements ClientInterface {
 
 			if ( ! $redirect_host || $redirect_host !== $client_host ) {
 				return new WP_Error( 'client_uri_mismatch', __( 'The redirect URI is not on the same domain as the client URI.', 'oauth2' ) );
+			}
+		}
+
+		if ( isset( $statement->iss ) ) {
+			$iss_host = parse_url( $statement->iss, PHP_URL_HOST );
+
+			if ( ! $iss_host || $iss_host !== $client_host ) {
+				return new WP_Error( 'client_uri_mismatch', __( 'The statement issuing URI is not on the same domain as the client URI.', 'oauth2' ) );
 			}
 		}
 
@@ -234,6 +319,15 @@ class DynamicClient implements ClientInterface {
 	}
 
 	/**
+	 * Checks if the software statement was verified as being signed by the client_uri.
+	 *
+	 * @return bool
+	 */
+	public function is_verified() {
+		return $this->verified;
+	}
+
+	/**
 	 * Persists a dynamic client to a real client.
 	 *
 	 * @return Client|WP_Error
@@ -295,6 +389,7 @@ class DynamicClient implements ClientInterface {
 
 		update_post_meta( $client->get_post_id(), static::SOFTWARE_ID_KEY . $this->get_id(), 1 );
 		update_post_meta( $client->get_post_id(), static::SOFTWARE_STATEMENT_KEY, $this->statement );
+		update_post_meta( $client->get_post_id(), static::VERIFIED_KEY, $this->is_verified() );
 
 		if ( current_user_can( 'publish_post', $client->get_post_id() ) ) {
 			$approved = $client->approve();
