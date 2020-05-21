@@ -28,6 +28,8 @@ function bootstrap() {
 	add_action( 'init', __NAMESPACE__ . '\\rest_oauth2_load_authorize_page' );
 	add_action( 'admin_menu', __NAMESPACE__ . '\\Admin\\register' );
 	Admin\Profile\bootstrap();
+
+	add_action( 'cli_init', __NAMESPACE__ . '\\register_cli' );
 }
 
 /**
@@ -108,6 +110,13 @@ function register_in_index( WP_REST_Response $response ) {
 	$response->set_data( $data );
 
 	return $response;
+}
+
+/**
+ * Registers the WP-CLI commands.
+ */
+function register_cli() {
+	\WP_CLI::add_command( 'oauth2', Command::class );
 }
 
 /**

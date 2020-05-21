@@ -9,8 +9,7 @@
 
 namespace WP\OAuth2;
 
-use Firebase\JWT\JWT;
-use WP\OAuth2\Tokens\Authorization_Code;
+use WP\JWT\JWT;
 use WP_Error;
 use WP_User;
 
@@ -73,7 +72,7 @@ class DynamicClient implements ClientInterface {
 	 * @return DynamicClient|WP_Error
 	 */
 	public static function from_jwt( $jwt ) {
-		$statement = JWT::decode( $jwt, 'password', array( 'HS256' ) );
+		$statement = JWT::decode( $jwt, '', array( 'none' ), 'unsecure' );
 		$valid     = rest_validate_value_from_schema( $statement, self::SCHEMA );
 
 		if ( is_wp_error( $valid ) ) {
