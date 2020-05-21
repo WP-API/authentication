@@ -52,6 +52,10 @@ class Authorization_Code extends Base {
 				if ( $client instanceof DynamicClient ) {
 					$redirect_args['client_id'] = $client->persist_dynamic_client()->get_id();
 				}
+
+				if ( ! $client->is_approved() ) {
+					$redirect_args['pending'] = true;
+				}
 				break;
 
 			case 'cancel':

@@ -54,7 +54,7 @@ class DynamicClient implements ClientInterface {
 	private $statement;
 
 	/** @var Client|WP_Error */
-	private $persisted;
+	private $persisted = false;
 
 	/**
 	 * DynamicClient constructor.
@@ -162,11 +162,34 @@ class DynamicClient implements ClientInterface {
 		return false;
 	}
 
+	/**
+	 * Check if a client has been approved for use.
+	 *
+	 * @return bool
+	 */
+	public function is_approved() {
+		$persisted = $this->find_persisted_dynamic_client();
+
+		if ( $persisted instanceof ClientInterface ) {
+			return $persisted->is_approved();
+		}
+
+		return false;
+	}
+
+	/**
+	 * Approve a client.
+	 *
+	 * @return bool|WP_Error True if client was updated, error otherwise.
+	 */
 	public function approve() {
-		return new WP_Error(
-			'oauth2.dynamic_client.no_approve',
-			__( 'Dynamic Clients cannot be approved.', 'oauth2' )
-		);
+		$persisted = $this->persist_dynamic_client();
+
+		if ( is_wp_error( $persisted ) ) {
+			return $persisted;
+		}
+
+		return $persisted->approve();
 	}
 
 	/**
@@ -175,12 +198,8 @@ class DynamicClient implements ClientInterface {
 	 * @return Client|WP_Error
 	 */
 	public function persist_dynamic_client() {
-		if ( ! $this->persisted ) {
-			$this->persisted = $this->find_persisted_dynamic_client();
-
-			if ( ! $this->persisted ) {
-				$this->persisted = $this->create_persisted_dynamic_client();
-			}
+		if ( ! $this->persisted && ! $this->find_persisted_dynamic_client() ) {
+			$this->persisted = $this->create_persisted_dynamic_client();
 		}
 
 		return $this->persisted;
@@ -192,20 +211,24 @@ class DynamicClient implements ClientInterface {
 	 * @return Client|null
 	 */
 	protected function find_persisted_dynamic_client() {
-		$query = new \WP_Query(
-			array(
-				'post_type'        => Client::POST_TYPE,
-				'meta_key'         => static::SOFTWARE_ID_KEY . $this->get_id(),
-				'meta_compare_key' => 'EXISTS',
-				'post_status'      => 'any',
-			)
-		);
+		if ( false === $this->persisted ) {
+			$query = new \WP_Query(
+				array(
+					'post_type'        => Client::POST_TYPE,
+					'meta_key'         => static::SOFTWARE_ID_KEY . $this->get_id(),
+					'meta_compare_key' => 'EXISTS',
+					'post_status'      => 'any',
+				)
+			);
 
-		if ( $query->posts ) {
-			return Client::get_by_post_id( $query->posts[0]->ID );
+			if ( $query->posts ) {
+				$this->persisted = Client::get_by_post_id( $query->posts[0]->ID );
+			} else {
+				$this->persisted = null;
+			}
 		}
 
-		return null;
+		return $this->persisted;
 	}
 
 	/**
@@ -232,10 +255,12 @@ class DynamicClient implements ClientInterface {
 		update_post_meta( $client->get_post_id(), static::SOFTWARE_ID_KEY . $this->get_id(), 1 );
 		update_post_meta( $client->get_post_id(), static::SOFTWARE_STATEMENT_KEY, $this->statement );
 
-		$approved = $client->approve();
+		if ( current_user_can( 'publish_post', $client->get_post_id() ) ) {
+			$approved = $client->approve();
 
-		if ( is_wp_error( $approved ) ) {
-			return $approved;
+			if ( is_wp_error( $approved ) ) {
+				return $approved;
+			}
 		}
 
 		return $client;

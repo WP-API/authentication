@@ -113,6 +113,13 @@ interface ClientInterface {
 	public function delete();
 
 	/**
+	 * Check if a client has been approved for use.
+	 *
+	 * @return bool
+	 */
+	public function is_approved();
+
+	/**
 	 * Approve a client.
 	 *
 	 * @return bool|WP_Error True if client was updated, error otherwise.

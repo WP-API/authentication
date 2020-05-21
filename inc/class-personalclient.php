@@ -183,6 +183,15 @@ class PersonalClient implements ClientInterface {
 	}
 
 	/**
+	 * Check if a client has been approved for use.
+	 *
+	 * @return bool
+	 */
+	public function is_approved() {
+		return true;
+	}
+
+	/**
 	 * Approve a client.
 	 *
 	 * @return bool|WP_Error True if client was updated, error otherwise.
@@ -190,7 +199,7 @@ class PersonalClient implements ClientInterface {
 	public function approve() {
 		return new WP_Error(
 			'oauth2.personalclient.no_approved',
-			__( 'Personal Access Tokens do not have an approval status.', 'oauth2' )
+			__( 'Personal Access Tokens are always approved for use.', 'oauth2' )
 		);
 	}
 }

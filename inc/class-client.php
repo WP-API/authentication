@@ -396,6 +396,15 @@ class Client implements ClientInterface {
 	}
 
 	/**
+	 * Check if a client has been approved for use.
+	 *
+	 * @return bool
+	 */
+	public function is_approved() {
+		return get_post_status( $this->get_post_id() ) === 'publish';
+	}
+
+	/**
 	 * Approve a client.
 	 *
 	 * @return bool|WP_Error True if client was updated, error otherwise.
