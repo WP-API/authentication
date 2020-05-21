@@ -215,6 +215,17 @@ function validate_redirect_uri( ClientInterface $client, $uri ) {
 			}
 		}
 
+
+		/**
+		 * Filter whether a callback is counted as valid.
+		 *
+		 * @param boolean         $valid          True if the callback URL is valid, false otherwise.
+		 * @param string          $url            Supplied callback URL.
+		 * @param string          $registered_uri URI being checked.
+		 * @param ClientInterface $client         OAuth 2 client object.
+		 */
+		$valid = apply_filters( 'rest_oauth_check_callback', $valid, $uri, $registered_uri, $client );
+
 		if ( $valid ) {
 			// Stop checking, we have a match.
 			return true;

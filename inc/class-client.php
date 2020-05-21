@@ -15,15 +15,15 @@ use WP_Query;
 use WP_User;
 
 class Client implements ClientInterface {
-	const POST_TYPE            = 'oauth2_client';
-	const CLIENT_SECRET_KEY    = '_oauth2_client_secret';
-	const TYPE_KEY             = '_oauth2_client_type';
-	const REDIRECT_URI_KEY     = '_oauth2_redirect_uri';
+	const POST_TYPE = 'oauth2_client';
+	const CLIENT_SECRET_KEY = '_oauth2_client_secret';
+	const TYPE_KEY = '_oauth2_client_type';
+	const REDIRECT_URI_KEY = '_oauth2_redirect_uri';
 	const AUTH_CODE_KEY_PREFIX = '_oauth2_authcode_';
-	const AUTH_CODE_LENGTH     = 12;
-	const CLIENT_ID_LENGTH     = 12;
+	const AUTH_CODE_LENGTH = 12;
+	const CLIENT_ID_LENGTH = 12;
 	const CLIENT_SECRET_LENGTH = 48;
-	const AUTH_CODE_AGE        = 600; // 10 * MINUTE_IN_SECONDS
+	const AUTH_CODE_AGE = 600; // 10 * MINUTE_IN_SECONDS
 
 	/**
 	 * @var WP_Post
@@ -172,58 +172,7 @@ class Client implements ClientInterface {
 	 *
 	 */
 	public function check_redirect_uri( $uri ) {
-		if ( ! $this->validate_callback( $uri ) ) {
-			return false;
-		}
-
-		$supplied       = wp_parse_url( $uri );
-		$all_registered = $this->get_redirect_uris();
-
-		foreach ( $all_registered as $registered_uri ) {
-			$registered = wp_parse_url( $registered_uri );
-
-			// Double-check registered URI is valid.
-			if ( ! $registered ) {
-				continue;
-			}
-
-			// Check all components except query and fragment
-			$parts = [ 'scheme', 'host', 'port', 'user', 'pass', 'path' ];
-			$valid = true;
-			foreach ( $parts as $part ) {
-				if ( isset( $registered[ $part ] ) !== isset( $supplied[ $part ] ) ) {
-					$valid = false;
-					break;
-				}
-
-				if ( ! isset( $registered[ $part ] ) ) {
-					continue;
-				}
-
-				if ( $registered[ $part ] !== $supplied[ $part ] ) {
-					$valid = false;
-					break;
-				}
-			}
-
-			/**
-			 * Filter whether a callback is counted as valid. (deprecated).
-			 * User rest_oauth_check_callback.
-			 *
-			 * @param boolean $valid          True if the callback URL is valid, false otherwise.
-			 * @param string  $url            Supplied callback URL.
-			 * @param string  $registered_uri URI being checked.
-			 * @param Client  $client         OAuth 2 client object.
-			 */
-			$valid = apply_filters( 'rest_oauth.check_callback', $valid, $uri, $registered_uri, $this );
-
-			if ( $valid ) {
-				// Stop checking, we have a match.
-				return true;
-			}
-		}
-
-		return false;
+		return validate_redirect_uri( $this, $uri );
 	}
 
 	/**
