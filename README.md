@@ -4,6 +4,10 @@
 
 The goal of this project is to provide a first-party authentication workflow within WordPress that enables external clients to connect to the WordPress REST API for the purpose of retrieving, editing or creating content. As an example, the [WordPress Mobile applications](https://github.com/wordpress-mobile) should be able to use this API to connect directly to any WordPress site without relying on XMLRPC or proxying through [WordPress.com](https://wordpress.com).
 
+## Current Effort
+
+The REST API team is currently working on an OAuth solution based off our existing [OAuth2 plugin](https://github.com/wp-api/oauth2) with [Dynamic Client Registration](https://tools.ietf.org/html/rfc7591) support. The work is being done on the `dynamic-client-registration` [branch](https://github.com/WP-API/authentication/tree/dynamic-client-registration).
+
 ## Assumptions
 
 Based on discussion at WCUS contributor day in November, 2019, we assume the following about how to best achieve the above goal:
